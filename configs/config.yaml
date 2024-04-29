@@ -1,0 +1,8 @@
+port: 8081
+
+db:
+    host: localhost
+    port: 5432
+    username: friendly_admin
+    dbname: friendly_db
+    sslmode: disable
