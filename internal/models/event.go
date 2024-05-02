@@ -21,3 +21,8 @@ type FriendsEvents struct {
 	FriendID uuid.UUID `json:"friend_id" db:"friend_id"`
 	EventID  uuid.UUID `json:"event_id" db:"event_id"`
 }
+
+type EventWithFriends struct {
+	Event   Event    `json:"event"`
+	Friends []Friend `json:"friends"`
+}

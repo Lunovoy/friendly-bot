@@ -1,7 +1,10 @@
 package telegram
 
 import (
+	"fmt"
 	"friendly-bot/internal/repository"
+	"log"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -29,10 +32,33 @@ func (b *Bot) Start() error {
 
 	b.handleUpdates(updates)
 
+	// fmt.Println("CHECK!!!")
+	// go b.checkEventsPeriodically()
+
 	return nil
 }
 
 func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
+
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	go func() {
+		for {
+			select {
+			case <-ticker.C: // Когда таймер срабатывает
+				fmt.Println("Минута!!!")
+				currentTime := time.Now()
+				events, err := b.repo.Event.GetEvents(currentTime)
+				if err != nil {
+					log.Printf("error getting events: %v", err)
+					continue
+				}
+
+				b.sendEventsInfo(events)
+			}
+		}
+	}()
+
 	for update := range updates {
 		if update.Message == nil {
 			continue

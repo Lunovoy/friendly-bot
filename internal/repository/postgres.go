@@ -11,6 +11,7 @@ const (
 	friendsEventsTable = "friends_events"
 	eventTable         = "event"
 	userTable          = "user"
+	tgChatTable        = "tg_chat"
 )
 
 type Config struct {
