@@ -20,43 +20,29 @@ func NewEventPostgres(db *sqlx.DB) *EventPostgres {
 }
 
 func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFriends, error) {
-	// query := fmt.Sprintf(`SELECT e.*, f.first_name
-	// 						FROM %s e
-	// 						JOIN %s fe ON e.id = fe.event_id
-	// 						JOIN %s f ON fe.friend_id = fe.friend_id
-	// 						WHERE e.start_notify_sent = false AND
-	// 						e.start_date <= $1 AND e.end_date > $1`, eventTable, friendsEventsTable, friendTable)
+
 	queryEvents := fmt.Sprintf(`SELECT e.*
 								FROM %s e
-								JOIN %s fe ON e.id = fe.event_id
-								JOIN %s f ON fe.friend_id = fe.friend_id
 								WHERE e.start_notify_sent = false AND 
-								e.start_date <= $1 AND e.end_date > $1`, eventTable, friendsEventsTable, friendTable)
-	queryFriendIDs := fmt.Sprintf(`SELECT fe.friend_id
-								FROM %s e
-								JOIN %s fe ON e.id = fe.event_id
-								JOIN %s f ON fe.friend_id = fe.friend_id
-								WHERE e.start_notify_sent = false AND 
-								e.start_date <= $1 AND e.end_date > $1`, eventTable, friendsEventsTable, friendTable)
+								e.start_date <= $1 AND e.end_date > $1`, eventTable)
+
 	queryFriends := fmt.Sprintf(`SELECT f.*
 								FROM %s e
 								JOIN %s fe ON e.id = fe.event_id
-								JOIN %s f ON fe.friend_id = fe.friend_id
+								JOIN %s f ON fe.friend_id = f.id
 								WHERE fe.event_id = $1`, eventTable, friendsEventsTable, friendTable)
 
 	eventWithFriends := []*models.EventWithFriends{}
 	var events []*models.Event
-	var friendIDs []*models.Friend
 	var friends []models.Friend
 
 	err := r.db.Select(&events, queryEvents, currentTime)
 	if err != nil {
 		return nil, err
 	}
-
-	err = r.db.Select(&friendIDs, queryFriendIDs, currentTime)
-	if err != nil {
-		return nil, err
+	fmt.Println("Time: ", currentTime, "Events: ")
+	for _, v := range events {
+		fmt.Println(*v)
 	}
 
 	friendsStmt, err := r.db.Preparex(queryFriends)
@@ -75,7 +61,7 @@ func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFri
 
 func (r *EventPostgres) UpdateStartEventStatus(eventID, userID uuid.UUID) error {
 
-	query := fmt.Sprintf("UPDATE %s SET start_notify_sent = true id=$1 AND user_id=$2", eventTable)
+	query := fmt.Sprintf("UPDATE %s SET start_notify_sent = true WHERE id = $1 AND user_id = $2", eventTable)
 
 	_, err := r.db.Exec(query, eventID, userID)
 

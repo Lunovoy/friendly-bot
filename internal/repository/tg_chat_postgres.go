@@ -43,11 +43,11 @@ func (r *TgChatPostgres) UpdateTgChat(chatID int64, userID uuid.UUID) error {
 
 func (r *TgChatPostgres) GetTgChatByUserID(userID uuid.UUID) (*models.TgChat, error) {
 
-	var tgChat *models.TgChat
+	var tgChat models.TgChat
 	query := fmt.Sprintf("SELECT * FROM \"%s\" WHERE user_id = $1", tgChatTable)
 
 	err := r.db.Get(&tgChat, query, userID)
-	return tgChat, err
+	return &tgChat, err
 }
 
 func (r *TgChatPostgres) GetTgChatByID(tgChatID uuid.UUID) (*models.TgChat, error) {

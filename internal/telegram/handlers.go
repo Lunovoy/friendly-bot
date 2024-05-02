@@ -139,7 +139,7 @@ func (b *Bot) checkEventsPeriodically() {
 func (b *Bot) sendEventsInfo(events []*models.EventWithFriends) {
 	for _, event := range events {
 		// Формируем сообщение с информацией о событии
-		message := fmt.Sprintf("Событие: %s\nНачало: %v\nОкончание: %v", event.Event.Title, event.Event.StartDate, event.Event.EndDate)
+		message := fmt.Sprintf("Событие: %s\n Начало: %v\n Окончание: %v", event.Event.Title, event.Event.StartDate.Time.Format(time.RFC1123), event.Event.EndDate.Time)
 
 		// Отправляем сообщение в Telegram каждому пользователю
 		tgChat, err := b.repo.GetTgChatByUserID(event.Event.UserID)

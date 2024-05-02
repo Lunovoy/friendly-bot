@@ -32,9 +32,6 @@ func (b *Bot) Start() error {
 
 	b.handleUpdates(updates)
 
-	// fmt.Println("CHECK!!!")
-	// go b.checkEventsPeriodically()
-
 	return nil
 }
 
@@ -53,6 +50,7 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 					log.Printf("error getting events: %v", err)
 					continue
 				}
+				fmt.Println(events)
 
 				b.sendEventsInfo(events)
 			}
