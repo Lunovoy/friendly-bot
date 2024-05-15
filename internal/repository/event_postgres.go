@@ -19,11 +19,11 @@ func NewEventPostgres(db *sqlx.DB) *EventPostgres {
 	}
 }
 
-func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFriends, error) {
+func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFriendsAndReminders, error) {
 
 	queryEvents := fmt.Sprintf(`SELECT e.*
 								FROM %s e
-								WHERE e.start_notify_sent = false AND 
+								WHERE e.is_active = true AND 
 								e.start_date <= $1 AND e.end_date > $1`, eventTable)
 
 	queryFriends := fmt.Sprintf(`SELECT f.*
@@ -32,9 +32,12 @@ func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFri
 								JOIN %s f ON fe.friend_id = f.id
 								WHERE fe.event_id = $1`, eventTable, friendsEventsTable, friendTable)
 
-	eventWithFriends := []*models.EventWithFriends{}
+	queryReminders := fmt.Sprintf("SELECT * FROM %s WHERE event_id = $1, user_id = $2", reminderTable)
+
+	eventWithFriendsAndReminders := []*models.EventWithFriendsAndReminders{}
 	var events []*models.Event
 	var friends []models.Friend
+	var reminders []models.Reminder
 
 	err := r.db.Select(&events, queryEvents, currentTime)
 	if err != nil {
@@ -51,19 +54,37 @@ func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFri
 	}
 	defer friendsStmt.Close()
 
+	remindersStmt, err := r.db.Preparex(queryReminders)
+	if err != nil {
+		return nil, err
+	}
+	defer remindersStmt.Close()
+
 	for _, event := range events {
 		friendsStmt.Select(&friends, event.ID)
-		eventWithFriends = append(eventWithFriends, &models.EventWithFriends{Event: *event, Friends: friends})
+		remindersStmt.Select(&reminders, event.ID, event.UserID)
+		eventWithFriendsAndReminders = append(eventWithFriendsAndReminders, &models.EventWithFriendsAndReminders{Event: *event, Friends: friends, Reminders: reminders})
+		reminders = nil
+		friends = nil
 	}
 
-	return eventWithFriends, err
+	return eventWithFriendsAndReminders, err
 }
 
-func (r *EventPostgres) UpdateStartEventStatus(eventID, userID uuid.UUID) error {
+func (r *EventPostgres) UpdateActiveStatus(eventID, userID uuid.UUID) error {
 
-	query := fmt.Sprintf("UPDATE %s SET start_notify_sent = true WHERE id = $1 AND user_id = $2", eventTable)
+	query := fmt.Sprintf("UPDATE %s SET is_active = true WHERE id=$1 AND user_id=$2", eventTable)
 
 	_, err := r.db.Exec(query, eventID, userID)
+
+	return err
+}
+
+func (r *EventPostgres) UpdateStartAndEndDate(eventID, userID uuid.UUID, startDate, endDate time.Time) error {
+
+	query := fmt.Sprintf("UPDATE %s SET start_date = $1, end_date = $2 WHERE id=$3 AND user_id=$4", eventTable)
+
+	_, err := r.db.Exec(query, startDate, endDate, eventID, userID)
 
 	return err
 }

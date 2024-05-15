@@ -17,6 +17,26 @@ const (
 	unknownCommand = "Такой команды не существует"
 )
 
+type Frequency struct {
+	Once         string
+	Everyday     string
+	Weekday      string
+	Weekly       string
+	MounthlyDate string
+	MounthlyDay  string
+	Annualy      string
+}
+
+var frequency = Frequency{
+	Once:         "once",
+	Everyday:     "everyday",
+	Weekday:      "weekday",
+	Weekly:       "weekly",
+	MounthlyDate: "mounthlyDate",
+	MounthlyDay:  "mounthlyDay",
+	Annualy:      "annualy",
+}
+
 func (b *Bot) handleCommand(message *tgbotapi.Message) error {
 	chatID := message.Chat.ID
 
@@ -116,27 +136,27 @@ func (b *Bot) handleUser(userID *uuid.UUID, chatID int64) (*models.TgChat, error
 	return tgChat, err
 }
 
-func (b *Bot) checkEventsPeriodically() {
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
+// func (b *Bot) checkEventsPeriodically() {
+// 	ticker := time.NewTicker(time.Minute)
+// 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C: // Когда таймер срабатывает
-			fmt.Println("Минута!!!")
-			currentTime := time.Now()
-			events, err := b.repo.Event.GetEvents(currentTime)
-			if err != nil {
-				log.Printf("error getting events: %v", err)
-				continue
-			}
+// 	for {
+// 		select {
+// 		case <-ticker.C: // Когда таймер срабатывает
+// 			fmt.Println("Минута!!!")
+// 			currentTime := time.Now()
+// 			events, err := b.repo.Event.GetEvents(currentTime)
+// 			if err != nil {
+// 				log.Printf("error getting events: %v", err)
+// 				continue
+// 			}
 
-			b.sendEventsInfo(events)
-		}
-	}
-}
+// 			b.sendEventsInfo(events)
+// 		}
+// 	}
+// }
 
-func (b *Bot) sendEventsInfo(events []*models.EventWithFriends) {
+func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 	for _, event := range events {
 		// Формируем сообщение с информацией о событии
 		message := fmt.Sprintf("Событие: %s\n Начало: %v\n Окончание: %v", event.Event.Title, event.Event.StartDate.Time.Format(time.RFC1123), event.Event.EndDate.Time.Format(time.RFC1123))
@@ -154,11 +174,44 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriends) {
 			continue
 		}
 
-		// После отправки сообщения, обновляем статус события, чтобы не отправлять уведомления повторно
-		err = b.repo.Event.UpdateStartEventStatus(event.Event.ID, event.Event.UserID)
-		if err != nil {
-			log.Printf("error updating event status: %s", err.Error())
+		switch *event.Event.Frequency {
+		// Если повторение однократное, то после отправки сообщения,
+		// обновляем статус события, чтобы не отправлять уведомления повторно
+		case frequency.Once:
+			err := b.repo.Event.UpdateActiveStatus(event.Event.ID, event.Event.UserID)
+			if err != nil {
+				log.Printf("error updating event status: %s", err.Error())
+				continue
+			}
+
+		case frequency.Everyday:
+			startDate := event.Event.StartDate.Time.Add(24 * time.Hour)
+			endDate := event.Event.EndDate.Time.Add(24 * time.Hour)
+			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, startDate, endDate)
+			if err != nil {
+				log.Printf("error updating event status: %s", err.Error())
+				continue
+			}
+		case frequency.Weekday:
+
+		case frequency.Weekly:
+			startDate := event.Event.StartDate.Time.Add(168 * time.Hour)
+			endDate := event.Event.EndDate.Time.Add(168 * time.Hour)
+			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, startDate, endDate)
+			if err != nil {
+				log.Printf("error updating event status: %s", err.Error())
+				continue
+			}
+		case frequency.MounthlyDate:
+
+		case frequency.MounthlyDay:
+
+		case frequency.Annualy:
+
+		default:
+			log.Printf("error: invalid frequency in event %s", event.Event.ID)
 			continue
 		}
+
 	}
 }
