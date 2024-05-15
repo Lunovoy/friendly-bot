@@ -204,8 +204,18 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 				continue
 			}
 		case frequency.MounthlyDate:
+			eventDate := event.Event.StartDate.Time
+			startDate := eventDate.AddDate(0, 1, 0)
+			endDate := eventDate.AddDate(0, 1, 0)
+			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, startDate, endDate)
+			if err != nil {
+				log.Printf("error updating event status: %s", err.Error())
+				continue
+			}
 
 		case frequency.MounthlyDay:
+			eventDate := event.Event.StartDate.Time
+			_, weekNum := eventDate.ISOWeek()
 
 		case frequency.Annualy:
 
