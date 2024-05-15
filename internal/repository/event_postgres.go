@@ -32,7 +32,7 @@ func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFri
 								JOIN %s f ON fe.friend_id = f.id
 								WHERE fe.event_id = $1`, eventTable, friendsEventsTable, friendTable)
 
-	queryReminders := fmt.Sprintf("SELECT * FROM %s WHERE event_id = $1, user_id = $2", reminderTable)
+	queryReminders := fmt.Sprintf("SELECT * FROM %s WHERE event_id = $1 AND user_id = $2", reminderTable)
 
 	eventWithFriendsAndReminders := []*models.EventWithFriendsAndReminders{}
 	var events []*models.Event

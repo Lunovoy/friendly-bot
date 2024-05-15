@@ -45,16 +45,22 @@ func (r *TgChatPostgres) GetTgChatByUserID(userID uuid.UUID) (*models.TgChat, er
 
 	var tgChat models.TgChat
 	query := fmt.Sprintf("SELECT * FROM \"%s\" WHERE user_id = $1", tgChatTable)
-
 	err := r.db.Get(&tgChat, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("tgchat: ", tgChat)
 	return &tgChat, err
 }
 
 func (r *TgChatPostgres) GetTgChatByID(tgChatID uuid.UUID) (*models.TgChat, error) {
 
-	var tgChat *models.TgChat
+	var tgChat models.TgChat
 	query := fmt.Sprintf("SELECT * FROM \"%s\" WHERE id = $1", tgChatTable)
 
 	err := r.db.Get(&tgChat, query, tgChatID)
-	return tgChat, err
+	if err != nil {
+		return nil, err
+	}
+	return &tgChat, err
 }

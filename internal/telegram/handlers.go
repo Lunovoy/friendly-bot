@@ -20,7 +20,7 @@ const (
 type Frequency struct {
 	Once         string
 	Everyday     string
-	Weekday      string
+	Weekdays     string
 	Weekly       string
 	MounthlyDate string
 	MounthlyDay  string
@@ -30,7 +30,7 @@ type Frequency struct {
 var frequency = Frequency{
 	Once:         "once",
 	Everyday:     "everyday",
-	Weekday:      "weekday",
+	Weekdays:     "weekdays",
 	Weekly:       "weekly",
 	MounthlyDate: "mounthlyDate",
 	MounthlyDay:  "mounthlyDay",
@@ -136,26 +136,6 @@ func (b *Bot) handleUser(userID *uuid.UUID, chatID int64) (*models.TgChat, error
 	return tgChat, err
 }
 
-// func (b *Bot) checkEventsPeriodically() {
-// 	ticker := time.NewTicker(time.Minute)
-// 	defer ticker.Stop()
-
-// 	for {
-// 		select {
-// 		case <-ticker.C: // Когда таймер срабатывает
-// 			fmt.Println("Минута!!!")
-// 			currentTime := time.Now()
-// 			events, err := b.repo.Event.GetEvents(currentTime)
-// 			if err != nil {
-// 				log.Printf("error getting events: %v", err)
-// 				continue
-// 			}
-
-// 			b.sendEventsInfo(events)
-// 		}
-// 	}
-// }
-
 func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 	for _, event := range events {
 		// Формируем сообщение с информацией о событии
@@ -186,13 +166,34 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 
 		case frequency.Everyday:
 			startDate := event.Event.StartDate.Time.Add(24 * time.Hour)
+			fmt.Printf("From db: %v ; Type: %T", event.Event.StartDate, event.Event.StartDate)
+			fmt.Printf("From func: %v ; Type: %T", startDate, startDate)
 			endDate := event.Event.EndDate.Time.Add(24 * time.Hour)
 			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, startDate, endDate)
 			if err != nil {
 				log.Printf("error updating event status: %s", err.Error())
 				continue
 			}
-		case frequency.Weekday:
+		case frequency.Weekdays:
+			// Вычисляем следующий день
+			nextDay := event.Event.StartDate.Time.AddDate(0, 0, 1)
+			// Находим день недели
+			nextWeekday := nextDay.Weekday()
+			var daysToAdd int
+			if nextWeekday == time.Saturday {
+				daysToAdd = 3
+			} else if nextWeekday == time.Sunday {
+				daysToAdd = 2
+			} else {
+				daysToAdd = 1
+			}
+			startDate := event.Event.StartDate.Time.AddDate(0, 0, daysToAdd)
+			endDate := event.Event.EndDate.Time.AddDate(0, 0, daysToAdd)
+			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, startDate, endDate)
+			if err != nil {
+				log.Printf("error updating event status: %s", err.Error())
+				continue
+			}
 
 		case frequency.Weekly:
 			startDate := event.Event.StartDate.Time.Add(168 * time.Hour)
