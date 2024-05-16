@@ -21,10 +21,17 @@ func NewEventPostgres(db *sqlx.DB) *EventPostgres {
 
 func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFriendsAndReminders, error) {
 
+	// queryEvents := fmt.Sprintf(`SELECT e.*
+	// 							FROM %s e
+	// 							WHERE e.is_active = true AND
+	// 							e.start_date <= $1 AND e.end_date > $1`, eventTable)
+
 	queryEvents := fmt.Sprintf(`SELECT e.*
-								FROM %s e
-								WHERE e.is_active = true AND 
-								e.start_date <= $1 AND e.end_date > $1`, eventTable)
+                            FROM %s e
+                            JOIN %s r ON e.id = r.event_id
+                            WHERE e.is_active = true AND 
+                                  e.start_date <= NOW() + (r.minutes_until_event * INTERVAL '1 minute') AND 
+                                  e.end_date > NOW()`, eventTable, reminderTable)
 
 	queryFriends := fmt.Sprintf(`SELECT f.*
 								FROM %s e
@@ -39,7 +46,7 @@ func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFri
 	var friends []models.Friend
 	var reminders []models.Reminder
 
-	err := r.db.Select(&events, queryEvents, currentTime)
+	err := r.db.Select(&events, queryEvents)
 	if err != nil {
 		return nil, err
 	}

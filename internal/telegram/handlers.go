@@ -214,8 +214,8 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 			}
 
 		case frequency.MounthlyDay:
-			eventDate := event.Event.StartDate.Time
-			_, weekNum := eventDate.ISOWeek()
+			// eventDate := event.Event.StartDate.Time
+			// _, weekNum := eventDate.ISOWeek()
 
 		case frequency.Annualy:
 
