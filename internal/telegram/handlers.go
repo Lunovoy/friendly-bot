@@ -212,9 +212,19 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 				continue
 			}
 		case frequency.MonthlyDate:
-			eventDate := event.Event.StartDate.Time
-			startDate := eventDate.AddDate(0, 1, 0)
-			endDate := eventDate.AddDate(0, 1, 0)
+			eventStartDate := event.Event.StartDate.Time
+			eventEndDate := event.Event.StartDate.Time
+			// eventStartDate := time.Date(2024, time.May, 31, 8, 10, 0, 0, time.Local)
+
+			startDate := eventStartDate.AddDate(0, 1, 0)
+			if startDate.Day() == 1 {
+				startDate = startDate.AddDate(0, 0, -1)
+			}
+			// fmt.Println("Next date ", startDate)
+			endDate := eventEndDate.AddDate(0, 1, 0)
+			if endDate.Day() == 1 {
+				endDate = endDate.AddDate(0, 0, -1)
+			}
 			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, startDate, endDate)
 			if err != nil {
 				log.Printf("error updating event status: %s", err.Error())
@@ -275,11 +285,8 @@ func getNextDayNumberInMonth(date time.Time) time.Time {
 	weekday := date.Weekday()
 	// Начинаем с первого дня месяца
 	currentDate := time.Date(year, month+1, 1, hour, minute, 0, 0, loc)
-
 	// Находим порядковый номер дня недели в месяце
 	ordinal := (day-1)/7 + 1
-	fmt.Println("номер дня недели в месяце ", ordinal, weekday)
-
 	// Перебираем все дни месяца
 	for {
 		fmt.Println("Перебор: ", currentDate)
