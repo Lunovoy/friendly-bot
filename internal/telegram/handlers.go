@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"friendly-bot/internal/models"
 	"log"
+	"sort"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -224,5 +225,24 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 			continue
 		}
 
+		sortedReminders := sortRemindersByMinutesUntilEvent(event.Reminders)
+		for _, reminder := range sortedReminders {
+			if reminder.IsActive {
+				b.repo.Event.UpdateReminderStatus(reminder.ID)
+				break
+			}
+		}
+
 	}
+}
+
+func sortRemindersByMinutesUntilEvent(reminders []models.Reminder) []models.Reminder {
+	sortedReminders := make([]models.Reminder, len(reminders))
+	copy(sortedReminders, reminders)
+
+	sort.SliceStable(sortedReminders, func(i, j int) bool {
+		return sortedReminders[i].MinutesUntilEvent > sortedReminders[j].MinutesUntilEvent
+	})
+
+	return sortedReminders
 }

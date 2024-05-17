@@ -23,6 +23,7 @@ type Event interface {
 	GetEvents(currentTime time.Time) ([]*models.EventWithFriendsAndReminders, error)
 	UpdateActiveStatus(eventID, userID uuid.UUID) error
 	UpdateStartAndEndDate(eventID, userID uuid.UUID, startDate, endDate time.Time) error
+	UpdateReminderStatus(reminderID uuid.UUID) error
 }
 
 type Repository struct {

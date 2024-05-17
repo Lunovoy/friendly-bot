@@ -28,9 +28,9 @@ func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFri
 
 	queryEvents := fmt.Sprintf(`SELECT e.*
                             FROM %s e
-                            JOIN %s r ON e.id = r.event_id
-                            WHERE e.is_active = true AND 
-                                  e.start_date <= NOW() + (r.minutes_until_event * INTERVAL '1 minute') AND 
+                            LEFT JOIN %s r ON e.id = r.event_id
+                            WHERE e.is_active = true AND r.is_active = true
+                                  e.start_date <= NOW() + (COALESCE(r.minutes_until_event, 0) * INTERVAL '1 minute') AND 
                                   e.end_date > NOW()`, eventTable, reminderTable)
 
 	queryFriends := fmt.Sprintf(`SELECT f.*
@@ -80,18 +80,84 @@ func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFri
 
 func (r *EventPostgres) UpdateActiveStatus(eventID, userID uuid.UUID) error {
 
-	query := fmt.Sprintf("UPDATE %s SET is_active = true WHERE id=$1 AND user_id=$2", eventTable)
+	tx, err := r.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var count int
+	queryCheck := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE event_id = $1 AND is_active = true", reminderTable)
+	err = tx.Get(&count, queryCheck, eventID)
+	if err != nil {
+		return err
+	}
 
-	_, err := r.db.Exec(query, eventID, userID)
+	if count != 0 {
+		return err
+	}
+
+	query := fmt.Sprintf("UPDATE %s SET is_active = false WHERE id=$1 AND user_id=$2", eventTable)
+
+	_, err = tx.Exec(query, eventID, userID)
+	if err != nil {
+		return err
+	}
+
+	queryReminders := fmt.Sprintf("UPDATE %s SET is_active = true WHERE event_id=$1", reminderTable)
+
+	_, err = tx.Exec(queryReminders, eventID)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
 
 	return err
 }
 
 func (r *EventPostgres) UpdateStartAndEndDate(eventID, userID uuid.UUID, startDate, endDate time.Time) error {
+	tx, err := r.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var count int
+
+	queryCheck := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE event_id = $1 AND is_active = true", reminderTable)
+	err = tx.Get(&count, queryCheck, eventID)
+	if err != nil {
+		return err
+	}
+
+	if count != 0 {
+		return err
+	}
 
 	query := fmt.Sprintf("UPDATE %s SET start_date = $1, end_date = $2 WHERE id=$3 AND user_id=$4", eventTable)
 
-	_, err := r.db.Exec(query, startDate, endDate, eventID, userID)
+	_, err = tx.Exec(query, startDate, endDate, eventID, userID)
+	if err != nil {
+		return err
+	}
+
+	queryReminders := fmt.Sprintf("UPDATE %s SET is_active = true WHERE event_id=$1", reminderTable)
+
+	_, err = tx.Exec(queryReminders, eventID)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+
+	return err
+}
+
+func (r *EventPostgres) UpdateReminderStatus(reminderID uuid.UUID) error {
+
+	query := fmt.Sprintf("UPDATE %s SET is_active = false WHERE id=$1", reminderTable)
+
+	_, err := r.db.Exec(query, reminderID)
 
 	return err
 }
