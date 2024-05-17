@@ -19,23 +19,23 @@ const (
 )
 
 type Frequency struct {
-	Once         string
-	Everyday     string
-	Weekdays     string
-	Weekly       string
-	MounthlyDate string
-	MounthlyDay  string
-	Annualy      string
+	Once        string
+	Everyday    string
+	Weekdays    string
+	Weekly      string
+	MonthlyDate string
+	MonthlyDay  string
+	Annualy     string
 }
 
 var frequency = Frequency{
-	Once:         "once",
-	Everyday:     "everyday",
-	Weekdays:     "weekdays",
-	Weekly:       "weekly",
-	MounthlyDate: "mounthlyDate",
-	MounthlyDay:  "mounthlyDay",
-	Annualy:      "annualy",
+	Once:        "once",
+	Everyday:    "everyday",
+	Weekdays:    "weekdays",
+	Weekly:      "weekly",
+	MonthlyDate: "monthlyDate",
+	MonthlyDay:  "monthlyDay",
+	Annualy:     "annualy",
 }
 
 func (b *Bot) handleCommand(message *tgbotapi.Message) error {
@@ -211,7 +211,7 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 				log.Printf("error updating event status: %s", err.Error())
 				continue
 			}
-		case frequency.MounthlyDate:
+		case frequency.MonthlyDate:
 			eventDate := event.Event.StartDate.Time
 			startDate := eventDate.AddDate(0, 1, 0)
 			endDate := eventDate.AddDate(0, 1, 0)
@@ -221,15 +221,26 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 				continue
 			}
 
-		case frequency.MounthlyDay:
-			// eventDate := event.Event.StartDate.Time
-			// _, weekNum := eventDate.ISOWeek()
+		case frequency.MonthlyDay:
+			startDate := event.Event.StartDate.Time
+			endDate := event.Event.EndDate.Time
+			sub := endDate.Sub(startDate)
+
+			newStartDate := getNextDayNumberInMonth(startDate)
+			newEndDate := newStartDate.Add(sub)
+
+			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, newStartDate, newEndDate)
+			if err != nil {
+				log.Printf("error updating event status: %s", err.Error())
+				continue
+			}
 
 		case frequency.Annualy:
-			eventDate := event.Event.StartDate.Time
-			startDate := eventDate.AddDate(1, 0, 0)
-			endDate := eventDate.AddDate(1, 0, 0)
-			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, startDate, endDate)
+			startDate := event.Event.StartDate.Time
+			endDate := event.Event.EndDate.Time
+			newStartDate := startDate.AddDate(1, 0, 0)
+			newEndDate := endDate.AddDate(1, 0, 0)
+			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, newStartDate, newEndDate)
 			if err != nil {
 				log.Printf("error updating event status: %s", err.Error())
 				continue
@@ -252,4 +263,45 @@ func sortRemindersByMinutesUntilEvent(reminders []models.Reminder) []models.Remi
 	})
 
 	return sortedReminders
+}
+
+func getNextDayNumberInMonth(date time.Time) time.Time {
+	year, month, day := date.Date()
+	loc := date.Location()
+	hour, minute := date.Hour(), date.Minute()
+	fmt.Println("next Month ", month+1)
+	// Инициализируем счетчик для подсчета вторых вторников
+	count := 0
+	weekday := date.Weekday()
+	// Начинаем с первого дня месяца
+	currentDate := time.Date(year, month+1, 1, hour, minute, 0, 0, loc)
+
+	// Находим порядковый номер дня недели в месяце
+	ordinal := (day-1)/7 + 1
+	fmt.Println("номер дня недели в месяце ", ordinal, weekday)
+
+	// Перебираем все дни месяца
+	for {
+		fmt.Println("Перебор: ", currentDate)
+		// Если текущий день - вторник, увеличиваем счетчик
+		if currentDate.Weekday() == weekday {
+			count++
+			fmt.Println("Неделя номер ", count)
+			// Если это второй вторник, возвращаем эту дату
+			if count == ordinal {
+				return currentDate
+			}
+		}
+
+		// Переходим к следующему дню
+		currentDate = currentDate.AddDate(0, 0, 1)
+		fmt.Println("Следующий день ", currentDate)
+		// Если достигли следующего месяца, выходим из цикла
+		if currentDate.Month() != month+1 {
+			break
+		}
+	}
+
+	// Если не удалось найти второй вторник, возвращаем нулевую дату
+	return time.Time{}
 }
