@@ -31,7 +31,7 @@ func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFri
                             LEFT JOIN %s r ON e.id = r.event_id
                             WHERE e.is_active = true AND r.is_active = true AND
                                   e.start_date <= NOW() + (r.minutes_until_event * INTERVAL '1 minute') AND 
-                                  e.end_date > NOW()`, eventTable, reminderTable)
+                                  e.end_date >= NOW()`, eventTable, reminderTable)
 
 	queryFriends := fmt.Sprintf(`SELECT f.*
 								FROM %s e
