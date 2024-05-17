@@ -29,8 +29,8 @@ func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFri
 	queryEvents := fmt.Sprintf(`SELECT e.*
                             FROM %s e
                             LEFT JOIN %s r ON e.id = r.event_id
-                            WHERE e.is_active = true AND r.is_active = true
-                                  e.start_date <= NOW() + (COALESCE(r.minutes_until_event, 0) * INTERVAL '1 minute') AND 
+                            WHERE e.is_active = true AND r.is_active = true AND
+                                  e.start_date <= NOW() + (r.minutes_until_event * INTERVAL '1 minute') AND 
                                   e.end_date > NOW()`, eventTable, reminderTable)
 
 	queryFriends := fmt.Sprintf(`SELECT f.*
@@ -88,6 +88,7 @@ func (r *EventPostgres) UpdateActiveStatus(eventID, userID uuid.UUID) error {
 	var count int
 	queryCheck := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE event_id = $1 AND is_active = true", reminderTable)
 	err = tx.Get(&count, queryCheck, eventID)
+	fmt.Println("\n!!!Количество!!!: ", count, err)
 	if err != nil {
 		return err
 	}
@@ -125,15 +126,16 @@ func (r *EventPostgres) UpdateStartAndEndDate(eventID, userID uuid.UUID, startDa
 	var count int
 
 	queryCheck := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE event_id = $1 AND is_active = true", reminderTable)
-	err = tx.Get(&count, queryCheck, eventID)
-	if err != nil {
-		return err
-	}
+	_ = tx.Get(&count, queryCheck, eventID)
+	fmt.Println("\n!!!Количество!!!: ", count, err)
+	// if err != nil {
+	// 	return err
+	// }
 
 	if count != 0 {
 		return err
 	}
-
+	fmt.Println("Обновляем время!")
 	query := fmt.Sprintf("UPDATE %s SET start_date = $1, end_date = $2 WHERE id=$3 AND user_id=$4", eventTable)
 
 	_, err = tx.Exec(query, startDate, endDate, eventID, userID)

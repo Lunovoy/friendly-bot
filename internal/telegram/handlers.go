@@ -139,6 +139,13 @@ func (b *Bot) handleUser(userID *uuid.UUID, chatID int64) (*models.TgChat, error
 
 func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 	for _, event := range events {
+		sortedReminders := sortRemindersByMinutesUntilEvent(event.Reminders)
+		for _, reminder := range sortedReminders {
+			if reminder.IsActive {
+				b.repo.Event.UpdateReminderStatus(reminder.ID)
+				break
+			}
+		}
 		// Формируем сообщение с информацией о событии
 		message := fmt.Sprintf("Событие: %s\n Начало: %v\n Окончание: %v", event.Event.Title, event.Event.StartDate.Time.Format(time.RFC1123), event.Event.EndDate.Time.Format(time.RFC1123))
 
@@ -166,10 +173,10 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 			}
 
 		case frequency.Everyday:
-			startDate := event.Event.StartDate.Time.Add(24 * time.Hour)
+			startDate := event.Event.StartDate.Time.AddDate(0, 0, 1)
 			fmt.Printf("From db: %v ; Type: %T", event.Event.StartDate, event.Event.StartDate)
 			fmt.Printf("From func: %v ; Type: %T", startDate, startDate)
-			endDate := event.Event.EndDate.Time.Add(24 * time.Hour)
+			endDate := event.Event.EndDate.Time.AddDate(0, 0, 1)
 			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, startDate, endDate)
 			if err != nil {
 				log.Printf("error updating event status: %s", err.Error())
@@ -197,8 +204,8 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 			}
 
 		case frequency.Weekly:
-			startDate := event.Event.StartDate.Time.Add(168 * time.Hour)
-			endDate := event.Event.EndDate.Time.Add(168 * time.Hour)
+			startDate := event.Event.StartDate.Time.AddDate(0, 0, 7)
+			endDate := event.Event.EndDate.Time.AddDate(0, 0, 7)
 			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, startDate, endDate)
 			if err != nil {
 				log.Printf("error updating event status: %s", err.Error())
@@ -219,18 +226,18 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 			// _, weekNum := eventDate.ISOWeek()
 
 		case frequency.Annualy:
+			eventDate := event.Event.StartDate.Time
+			startDate := eventDate.AddDate(1, 0, 0)
+			endDate := eventDate.AddDate(1, 0, 0)
+			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, startDate, endDate)
+			if err != nil {
+				log.Printf("error updating event status: %s", err.Error())
+				continue
+			}
 
 		default:
 			log.Printf("error: invalid frequency in event %s", event.Event.ID)
 			continue
-		}
-
-		sortedReminders := sortRemindersByMinutesUntilEvent(event.Reminders)
-		for _, reminder := range sortedReminders {
-			if reminder.IsActive {
-				b.repo.Event.UpdateReminderStatus(reminder.ID)
-				break
-			}
 		}
 
 	}
