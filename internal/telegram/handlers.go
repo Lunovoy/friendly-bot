@@ -153,7 +153,7 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 			}
 		}
 		// Формируем сообщение с информацией о событии
-		message := fmt.Sprintf("Событие: %s\n Описание: %s\n Начало: %v\n Окончание: %v\n Участники: %s\n", event.Event.Title, event.Event.Description, event.Event.StartDate.Time.Format(time.RFC1123), event.Event.EndDate.Time.Format(time.RFC1123), friendsMessage)
+		message := fmt.Sprintf("Событие: %s\n Описание: %s\n Начало: %v\n Окончание: %v\n Участники:\n %s\n", event.Event.Title, event.Event.Description, event.Event.StartDate.Time.Format(time.RFC1123), event.Event.EndDate.Time.Format(time.RFC1123), friendsMessage)
 
 		// Отправляем сообщение в Telegram каждому пользователю
 		tgChat, err := b.repo.GetTgChatByUserID(event.Event.UserID)
