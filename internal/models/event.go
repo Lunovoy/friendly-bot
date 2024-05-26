@@ -29,7 +29,7 @@ type EventWithFriends struct {
 }
 
 type EventWithFriendsAndReminders struct {
-	Event     Event      `json:"event"`
-	Friends   []Friend   `json:"friends"`
-	Reminders []Reminder `json:"reminders"`
+	Event     Event                `json:"event"`
+	Friends   []FriendWithWorkInfo `json:"friends"`
+	Reminders []Reminder           `json:"reminders"`
 }

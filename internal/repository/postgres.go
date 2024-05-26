@@ -13,6 +13,7 @@ const (
 	userTable          = "user"
 	tgChatTable        = "tg_chat"
 	reminderTable      = "reminder"
+	workInfoTable      = "work_info"
 )
 
 type Config struct {

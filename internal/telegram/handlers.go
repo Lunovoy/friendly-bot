@@ -146,8 +146,14 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 				break
 			}
 		}
+		var friendsMessage string
+		for _, event := range events {
+			for _, friend := range event.Friends {
+				friendsMessage += fmt.Sprintf("- Имя: %s %s; Способ связи: %s %s\n", friend.FirstName, friend.LastName, friend.CommunicationMethod, friend.Messenger)
+			}
+		}
 		// Формируем сообщение с информацией о событии
-		message := fmt.Sprintf("Событие: %s\n Начало: %v\n Окончание: %v", event.Event.Title, event.Event.StartDate.Time.Format(time.RFC1123), event.Event.EndDate.Time.Format(time.RFC1123))
+		message := fmt.Sprintf("Событие: %s\n Описание: %s\n Начало: %v\n Окончание: %v\n Участники: %s\n", event.Event.Title, event.Event.Description, event.Event.StartDate.Time.Format(time.RFC1123), event.Event.EndDate.Time.Format(time.RFC1123), friendsMessage)
 
 		// Отправляем сообщение в Telegram каждому пользователю
 		tgChat, err := b.repo.GetTgChatByUserID(event.Event.UserID)
@@ -174,8 +180,6 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 
 		case frequency.Everyday:
 			startDate := event.Event.StartDate.Time.AddDate(0, 0, 1)
-			fmt.Printf("From db: %v ; Type: %T", event.Event.StartDate, event.Event.StartDate)
-			fmt.Printf("From func: %v ; Type: %T", startDate, startDate)
 			endDate := event.Event.EndDate.Time.AddDate(0, 0, 1)
 			err := b.repo.Event.UpdateStartAndEndDate(event.Event.ID, event.Event.UserID, startDate, endDate)
 			if err != nil {
@@ -214,7 +218,6 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 		case frequency.MonthlyDate:
 			eventStartDate := event.Event.StartDate.Time
 			eventEndDate := event.Event.StartDate.Time
-			// eventStartDate := time.Date(2024, time.May, 31, 8, 10, 0, 0, time.Local)
 
 			startDate := eventStartDate.AddDate(0, 1, 0)
 			if startDate.Day() == 1 {

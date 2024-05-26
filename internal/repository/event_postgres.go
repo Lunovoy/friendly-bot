@@ -21,11 +21,6 @@ func NewEventPostgres(db *sqlx.DB) *EventPostgres {
 
 func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFriendsAndReminders, error) {
 
-	// queryEvents := fmt.Sprintf(`SELECT e.*
-	// 							FROM %s e
-	// 							WHERE e.is_active = true AND
-	// 							e.start_date <= $1 AND e.end_date > $1`, eventTable)
-
 	queryEvents := fmt.Sprintf(`SELECT e.*
                             FROM %s e
                             LEFT JOIN %s r ON e.id = r.event_id
@@ -33,17 +28,18 @@ func (r *EventPostgres) GetEvents(currentTime time.Time) ([]*models.EventWithFri
                                   e.start_date <= NOW() + (r.minutes_until_event * INTERVAL '1 minute') AND 
                                   e.end_date >= NOW()`, eventTable, reminderTable)
 
-	queryFriends := fmt.Sprintf(`SELECT f.*
+	queryFriends := fmt.Sprintf(`SELECT f.*, w.messenger, w.communication_method
 								FROM %s e
 								JOIN %s fe ON e.id = fe.event_id
 								JOIN %s f ON fe.friend_id = f.id
-								WHERE fe.event_id = $1`, eventTable, friendsEventsTable, friendTable)
+								JOIN %s w ON w.friend_id = f.id
+								WHERE fe.event_id = $1`, eventTable, friendsEventsTable, friendTable, workInfoTable)
 
 	queryReminders := fmt.Sprintf("SELECT * FROM %s WHERE event_id = $1 AND user_id = $2", reminderTable)
 
 	eventWithFriendsAndReminders := []*models.EventWithFriendsAndReminders{}
 	var events []*models.Event
-	var friends []models.Friend
+	var friends []models.FriendWithWorkInfo
 	var reminders []models.Reminder
 
 	err := r.db.Select(&events, queryEvents)
