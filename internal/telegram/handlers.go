@@ -25,7 +25,7 @@ type Frequency struct {
 	Weekly      string
 	MonthlyDate string
 	MonthlyDay  string
-	Annualy     string
+	Annually    string
 }
 
 var frequency = Frequency{
@@ -35,7 +35,7 @@ var frequency = Frequency{
 	Weekly:      "weekly",
 	MonthlyDate: "monthlyDate",
 	MonthlyDay:  "monthlyDay",
-	Annualy:     "annualy",
+	Annually:    "annually",
 }
 
 func (b *Bot) handleCommand(message *tgbotapi.Message) error {
@@ -161,7 +161,8 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 			log.Printf("error getting chat: %s\n", err.Error())
 			continue
 		}
-		// Для примера, отправим сообщение в чат, из которого была получена команда /start
+
+		// Отправляем сообщение в чат
 		_, err = b.bot.Send(tgbotapi.NewMessage(tgChat.ChatID, message))
 		if err != nil {
 			log.Printf("error sending message: %s;\nTo User: %v\n", err.Error(), tgChat.UserID)
