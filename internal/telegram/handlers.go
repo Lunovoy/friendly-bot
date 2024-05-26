@@ -249,7 +249,7 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 				continue
 			}
 
-		case frequency.Annualy:
+		case frequency.Annually:
 			startDate := event.Event.StartDate.Time
 			endDate := event.Event.EndDate.Time
 			newStartDate := startDate.AddDate(1, 0, 0)
