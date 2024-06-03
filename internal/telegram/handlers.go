@@ -147,10 +147,8 @@ func (b *Bot) sendEventsInfo(events []*models.EventWithFriendsAndReminders) {
 			}
 		}
 		var friendsMessage string
-		for _, event := range events {
-			for _, friend := range event.Friends {
-				friendsMessage += fmt.Sprintf("- Имя: %s %s; Способ связи: %s %s\n", friend.FirstName, friend.LastName, friend.CommunicationMethod, friend.Messenger)
-			}
+		for _, friend := range event.Friends {
+			friendsMessage += fmt.Sprintf("- Имя: %s %s; Способ связи: %s %s\n", friend.FirstName, friend.LastName, friend.CommunicationMethod, friend.Messenger)
 		}
 		// Формируем сообщение с информацией о событии
 		message := fmt.Sprintf("Событие: %s\n Описание: %s\n Начало: %v\n Окончание: %v\n Участники:\n %s\n", event.Event.Title, event.Event.Description, event.Event.StartDate.Time.Format(time.RFC1123), event.Event.EndDate.Time.Format(time.RFC1123), friendsMessage)
